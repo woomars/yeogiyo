@@ -4,6 +4,34 @@
 
   const RING_PHASES = new Set(['playing', 'judging']);
 
+  // 이전 화면과 새 화면을 비교해 낼 소리를 고른다. 같은 화면이 다시 와도 소리는 한 번만 난다.
+  // iRang: 이번 판정에서 내가 벨을 눌렀는지(눌렀으면 이미 내 쪽에서 딩동이 났다).
+  function cues(prev, view, iRang = false) {
+    if (!prev) return [];
+    const out = [];
+    const id = view.me;
+    const was = prev.players.find((p) => p.id === id);
+    const now = view.players.find((p) => p.id === id);
+    const entered = (phase) => prev.phase !== phase && view.phase === phase;
+
+    if (prev.phase === 'lobby' && view.phase === 'lobby' && view.players.length > prev.players.length) out.push('join');
+    if (prev.phase === 'lobby' && view.phase === 'playing') out.push('start');
+    if (prev.phase === 'playing' && view.phase === 'playing' && view.version > prev.version) out.push('flip');
+    if (prev.phase === 'playing' && view.phase === 'judging' && !iRang) out.push('ding');
+
+    const becameOut = !!(was && now && !was.out && now.out && view.phase !== 'over');
+    if (entered('result') && view.result) {
+      const r = view.result;
+      if (r.wrongIds.includes(id)) out.push(becameOut ? 'out' : 'buzz');
+      else if (r.winnerId === id) out.push('collect');
+      else if (r.winnerId) out.push('miss');
+    } else if (becameOut) out.push('out');
+
+    if (entered('paused')) out.push('pause');
+    if (entered('over')) out.push(view.winners.includes(id) ? 'fanfare' : 'end');
+    return out;
+  }
+
   function create({
     send,
     onView,
@@ -15,7 +43,7 @@
   }) {
     let view = null;
     let playerId = null;
-    let lastResult = null;
+    let iRang = false;
     const renderedAt = {};
 
     function me() {
@@ -43,16 +71,11 @@
           if (renderedAt[v] === undefined) renderedAt[v] = now();
           for (const k of Object.keys(renderedAt)) if (k < v - 50) delete renderedAt[k];
         });
-        if (view.phase === 'result' && view.result) {
-          const key = JSON.stringify(view.result) + view.version;
-          if (key !== lastResult) {
-            lastResult = key;
-            if (view.result.wrongIds.includes(view.me)) {
-              sound.buzz();
-              sound.vibrate(200);
-            }
-          }
+        for (const name of cues(prev, view, iRang)) {
+          if (typeof sound[name] === 'function') sound[name]();
+          if (name === 'buzz' || name === 'out') sound.vibrate(200);
         }
+        if (!RING_PHASES.has(view.phase)) iRang = false;
       }
     }
 
@@ -67,6 +90,7 @@
       const t = now();
       const start = renderedAt[view.fiveStart] ?? renderedAt[view.version] ?? t;
       send({ t: 'ring', version: view.version, reactionMs: Math.max(0, t - start) });
+      iRang = true;
       sound.ding();
       sound.vibrate(30);
     }
@@ -80,7 +104,7 @@
     };
   }
 
-  const api = { create };
+  const api = { create, cues };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.Client = api;
 })(this);
