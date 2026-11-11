@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#fbeed3">
 <meta name="description" content="같은 메뉴가 딱 5개면 벨을 누르는 가족용 반응 속도 카드 게임">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="style.css?v=899605c9e4">
+<link rel="stylesheet" href="style.css?v=33e5045a58">
 </head>
 <body>
 
@@ -34,7 +34,6 @@
     <button class="btn primary" data-act="create">방 만들기</button>
     <button class="btn dark" data-act="join-open">방 들어가기</button>
     <button class="btn light" data-act="rules-open">간단 규칙</button>
-    <p class="foot">모두 같은 와이파이에 연결해 주세요</p>
   </section>
 
   <section class="screen" id="screen-rules" hidden>
@@ -75,6 +74,12 @@
       <p class="muted">카메라로 찍으면 바로 들어옵니다</p>
     </div>
     <ul class="players" id="lobby-players"></ul>
+    <div class="host-only bot-add" id="bot-add">
+      <span>봇 추가</span>
+      <button class="chip" data-act="add-bot" data-level="easy">하</button>
+      <button class="chip" data-act="add-bot" data-level="normal">중</button>
+      <button class="chip" data-act="add-bot" data-level="hard">상</button>
+    </div>
     <div class="host-only">
       <label class="toggle">시간 제한 7분 <input type="checkbox" id="time-limit" checked><span class="sw"></span></label>
       <button class="btn primary" data-act="start" id="start-btn">시작하기</button>
@@ -122,12 +127,12 @@
 <script src="vendor/qrcode.js?v=6e6189e2b1"></script>
 <script src="js/game.js?v=0711414d47"></script>
 <script src="js/judge.js?v=c8758ac343"></script>
-<script src="js/host.js?v=584e7bac1e"></script>
+<script src="js/host.js?v=d741040600"></script>
 <script src="js/net.js?v=19f072a54c"></script>
 <script src="js/cards.js?v=e41d9c12d9"></script>
 <script src="js/sound.js?v=61819a0295"></script>
-<script src="js/ui.js?v=ba40ea85c5"></script>
+<script src="js/ui.js?v=b26f3facca"></script>
 <script src="js/client.js?v=63b27fd04d"></script>
-<script src="js/app.js?v=e18fa64d16"></script>
+<script src="js/app.js?v=c8e822b5a1"></script>
 </body>
 </html>

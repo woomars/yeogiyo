@@ -17,10 +17,25 @@
   // 시간 제한이 흐르는 단계. 대기실, 멈춤, 끝에서는 멈춘다.
   const CLOCK_PHASES = new Set(['playing', 'judging', 'result']);
   const MAX_WINDOW_MS = 1000;
+
+  // 봇 난이도. 반응(ms)은 합 5가 나온 뒤 벨을 누르기까지, 놓침은 합 5를 못 보고 지나갈 확률,
+  // 헛벨은 합이 4나 6일 때 잘못 누를 확률, 뒤집기(ms)는 자기 차례에 카드를 뒤집기까지.
+  const BOT_LEVELS = {
+    easy: { label: '하', react: [1100, 1700], miss: 0.25, wrong: 0.1, flip: [900, 1500] },
+    normal: { label: '중', react: [750, 1100], miss: 0.08, wrong: 0.04, flip: [700, 1200] },
+    hard: { label: '상', react: [450, 700], miss: 0, wrong: 0, flip: [600, 1000] },
+  };
   const RTT_SAMPLES = 10;
 
   const randomToken = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
   const cleanName = (name) => String(name || '').trim().slice(0, 8) || '이름 없음';
+
+  // 어느 메뉴든 합이 4나 6이면 헷갈리기 쉽다(헛벨을 누를 만한 판).
+  function nearFive(cards) {
+    const sums = {};
+    for (const k of cards) if (k) sums[k.menu] = (sums[k.menu] || 0) + k.count;
+    return Object.values(sums).some((v) => v === 4 || v === 6);
+  }
 
   class HostSession {
     constructor({ hostPeerId, rng, clock, send, makeToken = randomToken }) {
@@ -29,7 +44,7 @@
       this.clock = clock;
       this.send = send;
       this.makeToken = makeToken;
-      this.members = []; // { id, name, peerId, token, connected }
+      this.members = []; // { id, name, peerId, token, connected, bot } bot: 난이도(사람은 null)
       this.nextId = 2;
       this.phase = 'lobby';
       this.timeLimit = true;
@@ -52,6 +67,7 @@
       for (const h of [this.judgeTimer, this.resultTimer, this.limitTimer]) if (h !== null) this.clock.clearTimeout(h);
       for (const { timer } of this.pending.values()) this.clock.clearTimeout(timer);
       this.pending.clear();
+      for (const m of this.members) if (m.bot) this.stopBot(m);
       this.judgeTimer = this.resultTimer = this.limitTimer = null;
     }
 
@@ -89,6 +105,8 @@
         case 'flip': this.onFlip(m); break;
         case 'ring': this.onRing(m, msg); break;
         case 'again': if (isHost) this.onAgain(); break;
+        case 'add-bot': if (isHost) this.onAddBot(msg); break;
+        case 'remove-bot': if (isHost) this.onRemoveBot(msg); break;
         case 'leave': if (!isHost) this.onLeave(m); break;
         default: break;
       }
@@ -116,7 +134,7 @@
     close() {
       if (this.disposed) return;
       for (const m of this.members) {
-        if (m.connected && m.peerId !== this.hostPeerId) this.send(m.peerId, { t: 'closed' });
+        if (m.connected && !m.bot && m.peerId !== this.hostPeerId) this.send(m.peerId, { t: 'closed' });
       }
     }
 
@@ -133,7 +151,7 @@
       if (this.phase !== 'lobby') return this.send(peerId, { t: 'reject', reason: 'started' });
       if (this.members.length >= MAX_PLAYERS) return this.send(peerId, { t: 'reject', reason: 'full' });
       const id = peerId === this.hostPeerId ? 'p1' : 'p' + this.nextId++;
-      const m = { id, name: cleanName(msg.name), peerId, token: this.makeToken(), connected: true };
+      const m = { id, name: cleanName(msg.name), peerId, token: this.makeToken(), connected: true, bot: null };
       if (id === 'p1') this.members.unshift(m);
       else this.members.push(m);
       this.send(peerId, { t: 'welcome', playerId: id, token: m.token });
@@ -175,6 +193,7 @@
 
     onRing(m, msg) {
       if (this.phase !== 'playing' && this.phase !== 'judging') return;
+      if (!this.game) return;
       const g = this.game;
       const p = g.players.find((x) => x.id === m.id);
       if (!p || p.out || p.removed) return;
@@ -192,6 +211,30 @@
         this.judgeTimer = this.clock.setTimeout(() => this.settle(), this.judgeWindowMs());
         this.broadcast();
       }
+    }
+
+    onAddBot(msg) {
+      if (this.phase !== 'lobby' || this.members.length >= MAX_PLAYERS) return;
+      const level = BOT_LEVELS[msg.level] ? msg.level : 'normal';
+      const used = new Set(this.members.map((m) => m.name));
+      let n = 1;
+      while (used.has(`로봇${n}(${BOT_LEVELS[level].label})`) || this.members.some((m) => m.bot && m.botNo === n)) n++;
+      this.members.push({
+        id: 'p' + this.nextId++,
+        name: `로봇${n}(${BOT_LEVELS[level].label})`,
+        botNo: n,
+        peerId: null,
+        token: null,
+        connected: true,
+        bot: level,
+      });
+      this.broadcast();
+    }
+
+    onRemoveBot(msg) {
+      if (this.phase !== 'lobby') return;
+      const m = this.members.find((x) => x.bot && x.id === msg.id);
+      if (m) this.removeFromLobby(m);
     }
 
     onAgain() {
@@ -215,8 +258,85 @@
     }
 
     removeFromLobby(m) {
+      if (m.bot) this.stopBot(m);
       this.members = this.members.filter((x) => x !== m);
       this.broadcast();
+    }
+
+    // ---- 봇 ----
+    // 화면 정보를 보낼 때마다(=상태가 바뀔 때마다) 봇이 할 일을 정한다. 실제 행동은 타이머로 나중에 한다.
+
+    between([lo, hi]) {
+      return lo + (hi - lo) * this.rng();
+    }
+
+    stopBot(m) {
+      const b = m.brain;
+      if (!b) return;
+      if (b.flipTimer !== null) this.clock.clearTimeout(b.flipTimer);
+      if (b.ringTimer !== null) this.clock.clearTimeout(b.ringTimer);
+      b.flipTimer = b.ringTimer = null;
+    }
+
+    driveBots() {
+      const g = this.game;
+      for (const m of this.members) {
+        if (!m.bot) continue;
+        if (!m.brain || m.brain.game !== g) {
+          this.stopBot(m);
+          m.brain = { game: g, flipTimer: null, ringTimer: null, fiveSeen: null, seenAt: 0, lookedAt: -1 };
+        }
+        const b = m.brain;
+        const p = g && g.players.find((x) => x.id === m.id);
+        const active = !!(p && !p.out && !p.removed && !g.over);
+        const level = BOT_LEVELS[m.bot];
+
+        // 뒤집기: 내 차례이고 진행 중일 때만 시간을 잰다. 그 밖에는 걸어 둔 걸 거둔다.
+        const myTurn = active && this.phase === 'playing' && g.players[g.turn] === p;
+        if (!myTurn && b.flipTimer !== null) {
+          this.clock.clearTimeout(b.flipTimer);
+          b.flipTimer = null;
+        } else if (myTurn && b.flipTimer === null) {
+          b.flipTimer = this.clock.setTimeout(() => {
+            b.flipTimer = null;
+            if (this.phase === 'playing') this.onFlip(m);
+          }, this.between(level.flip));
+        }
+
+        // 벨: 진행 중이거나 판정 대기 중일 때만 누른다.
+        const canRing = active && (this.phase === 'playing' || this.phase === 'judging');
+        if (!canRing) {
+          if (b.ringTimer !== null) this.clock.clearTimeout(b.ringTimer);
+          b.ringTimer = null;
+          continue;
+        }
+        if (b.ringTimer !== null || b.lookedAt === g.version) continue;
+        b.lookedAt = g.version;
+        if (Game.isValidFive(g, g.version)) {
+          // 같은 합 5는 한 번만 본다.
+          if (b.fiveSeen === g.fiveStart) continue;
+          b.fiveSeen = g.fiveStart;
+          b.seenAt = this.clock.now();
+          if (this.rng() < level.miss) continue;
+          b.ringTimer = this.clock.setTimeout(() => {
+            b.ringTimer = null;
+            // 그새 합 5가 사라졌으면 지금 판을 다시 본다.
+            if (!Game.isValidFive(g, g.version)) return this.driveBots();
+            this.botRing(m, b.seenAt);
+          }, this.between(level.react));
+        } else if (this.phase === 'playing' && level.wrong > 0 && nearFive(Game.topCards(g)) && this.rng() < level.wrong) {
+          b.seenAt = this.clock.now();
+          b.ringTimer = this.clock.setTimeout(() => {
+            b.ringTimer = null;
+            this.botRing(m, b.seenAt);
+          }, this.between(level.react));
+        }
+      }
+    }
+
+    botRing(m, seenAt) {
+      if (this.disposed || this.game !== (m.brain && m.brain.game)) return;
+      this.onRing(m, { version: this.game.version, reactionMs: this.clock.now() - seenAt });
     }
 
     // ---- 벨 판정 ----
@@ -336,6 +456,7 @@
           name: m.name,
           color: COLORS[seat],
           connected: m.connected,
+          bot: m.bot ? BOT_LEVELS[m.bot].label : null,
           out: p ? p.out : false,
           removed: p ? p.removed : false,
           count: p ? Game.cardCount(p) : 0,
@@ -362,13 +483,15 @@
     broadcast() {
       if (this.disposed) return;
       for (const m of this.members) {
-        if (m.connected) this.send(m.peerId, { t: 'view', view: this.viewFor(m.id) });
+        if (m.connected && !m.bot) this.send(m.peerId, { t: 'view', view: this.viewFor(m.id) });
       }
+      this.driveBots();
     }
   }
 
   HostSession.TIMING = TIMING;
   HostSession.COLORS = COLORS;
+  HostSession.BOT_LEVELS = BOT_LEVELS;
 
   if (typeof module === 'object' && module.exports) module.exports = HostSession;
   else root.HostSession = HostSession;

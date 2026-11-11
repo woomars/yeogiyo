@@ -85,11 +85,16 @@
       $('#qr').innerHTML = q.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
       lastQr = qrUrl;
     }
-    const rows = view.players.map((p) => `<li><span class="dot" style="background:${p.color}"></span>${esc(p.name)}`
-      + `${p.id === view.me ? ' (나)' : ''}<small>${p.id === view.hostId ? '방장' : '준비됨'}</small></li>`);
+    const isHost = view.me === view.hostId;
+    const rows = view.players.map((p) => {
+      let tail = `<small>${p.id === view.hostId ? '방장' : p.bot ? `봇 · ${p.bot}` : '준비됨'}</small>`;
+      if (p.bot && isHost) tail += `<button class="x" data-act="remove-bot" data-id="${esc(p.id)}" aria-label="${esc(p.name)} 빼기">✕</button>`;
+      return `<li><span class="dot" style="background:${p.color}"></span>${esc(p.name)}${p.id === view.me ? ' (나)' : ''}${tail}</li>`;
+    });
     for (let i = view.players.length; i < 4; i++) rows.push('<li class="empty">기다리는 중…</li>');
     $('#lobby-players').innerHTML = rows.join('');
     const n = view.players.length;
+    document.querySelectorAll('#bot-add .chip').forEach((b) => { b.disabled = n >= 4; });
     const btn = $('#start-btn');
     btn.textContent = `시작하기 (${n}명)`;
     btn.disabled = n < 2;
@@ -206,6 +211,8 @@
       const act = btn.dataset.act;
       if (act === 'join-submit') emit('join-submit', codeValue());
       else if (act === 'start') emit('start', $('#time-limit').checked);
+      else if (act === 'add-bot') emit('add-bot', btn.dataset.level);
+      else if (act === 'remove-bot') emit('remove-bot', btn.dataset.id);
       else emit(act);
     });
     $('#name').addEventListener('input', (e) => emit('name-change', e.target.value));

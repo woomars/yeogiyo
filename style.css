@@ -112,6 +112,18 @@ h2 { font-size: 22px; text-align: center; margin-top: 24px; }
 .toggle input:checked + .sw { background: var(--bell); }
 .toggle input:checked + .sw::after { left: 21px; }
 .waiting { text-align: center; color: var(--muted); margin: 8px 0; }
+.bot-add { display: flex; align-items: center; gap: 8px; font-size: 15px; padding: 2px 2px; }
+.bot-add span { margin-right: auto; color: var(--muted); }
+.chip {
+  min-width: 52px; height: 40px; border-radius: 12px; border: 1.5px solid var(--edge); background: var(--face);
+  font-weight: 800; font-size: 16px; cursor: pointer; touch-action: manipulation;
+}
+.chip:disabled { opacity: .4; cursor: default; }
+.chip:not(:disabled):active { transform: scale(.96); }
+.players .x {
+  border: 0; background: none; color: var(--muted); font-size: 16px; width: 32px; height: 32px;
+  margin: -6px -8px -6px 0; cursor: pointer; touch-action: manipulation;
+}
 
 .is-guest .host-only, .is-host .guest-only { display: none !important; }
 

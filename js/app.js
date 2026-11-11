@@ -10,7 +10,7 @@
 
   const ERRORS = {
     'not-found': '방을 찾을 수 없어요. 번호를 확인해 주세요',
-    timeout: '연결하지 못했어요. 같은 와이파이인지 확인해 주세요. 게스트용 와이파이라면 한 사람의 핫스팟에 다른 사람이 접속해 보세요',
+    timeout: '연결하지 못했어요. 잠시 뒤 다시 시도해 주세요',
     'no-internet': '인터넷 연결을 확인해 주세요',
     full: '방이 가득 찼어요',
     started: '이미 게임이 시작됐어요',
@@ -210,7 +210,8 @@
 
   function leave() {
     if (mode === 'host') {
-      const others = client && client.view ? client.view.players.length > 1 : false;
+      // 봇만 있으면 묻지 않고 나간다.
+      const others = client && client.view ? client.view.players.some((p) => p.id !== client.view.me && !p.bot) : false;
       if (others && !confirm('나가면 방이 닫혀요. 나갈까요?')) return;
       endRoom(null);
     } else if (mode === 'guest') {
@@ -293,6 +294,8 @@
   UI.on('rules-close', () => UI.show('start'));
   UI.on('start', (timeLimit) => hostSend({ t: 'start', timeLimit }));
   UI.on('again', () => hostSend({ t: 'again' }));
+  UI.on('add-bot', (level) => hostSend({ t: 'add-bot', level }));
+  UI.on('remove-bot', (id) => hostSend({ t: 'remove-bot', id }));
   UI.on('flip', () => client && client.flip());
   UI.on('bell', () => client && client.ring());
   UI.on('leave', leave);
