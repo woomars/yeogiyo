@@ -15,7 +15,8 @@
     const entered = (phase) => prev.phase !== phase && view.phase === phase;
 
     if (prev.phase === 'lobby' && view.phase === 'lobby' && view.players.length > prev.players.length) out.push('join');
-    if (prev.phase === 'lobby' && view.phase === 'playing') out.push('start');
+    // 대기실에서 시작하거나 결과 화면에서 「한 판 더」로 바로 시작할 때
+    if ((prev.phase === 'lobby' || prev.phase === 'over') && view.phase === 'playing') out.push('start');
     if (prev.phase === 'playing' && view.phase === 'playing' && view.version > prev.version) out.push('flip');
     if (prev.phase === 'playing' && view.phase === 'judging' && !iRang) out.push('ding');
 
@@ -61,8 +62,8 @@
         const prev = view;
         view = msg.view;
         const v = view.version;
-        // 새 판(대기실을 거치거나 판 번호가 처음으로 돌아감)이면 이전 판의 기록을 버린다.
-        if (view.phase === 'lobby' || (prev && v < prev.version)) {
+        // 새 판(대기실·결과 화면을 거치거나 판 번호가 처음으로 돌아감)이면 이전 판의 기록을 버린다.
+        if (view.phase === 'lobby' || (prev && (v < prev.version || (prev.phase === 'over' && view.phase !== 'over')))) {
           for (const k of Object.keys(renderedAt)) delete renderedAt[k];
         }
         onView(view);

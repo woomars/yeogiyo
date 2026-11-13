@@ -18,6 +18,7 @@
   const DICT = {
     ko: {
       'meta.title': '여기요!',
+      'meta.appName': '여기요!',
       'meta.description': '같은 메뉴가 딱 5개면 벨을 누르는 가족용 반응 속도 카드 게임',
       'start.bell': '여기요!',
       'start.title': '여기요!',
@@ -60,6 +61,7 @@
       'lobby.leave': '나가기',
       'lobby.host': '방장',
       'lobby.ready': '준비됨',
+      'lobby.away': '다시 연결 기다리는 중',
       'lobby.botTag': ({ level }) => `봇 · ${level}`,
       'lobby.remove': ({ name }) => `${name} 빼기`,
       'lobby.me': ' (나)',
@@ -95,7 +97,8 @@
 
       'result.title': '게임 끝',
       'result.again': '한 판 더',
-      'result.waitHost': '방장이 「한 판 더」를 누르면 다시 시작해요',
+      'result.toLobby': '대기실로',
+      'result.waitHost': '방장이 「한 판 더」나 「대기실로」를 고르길 기다리는 중',
       'result.leave': '나가기',
       'result.winner': '우승',
       'result.cards': ({ n }) => `${n}장`,
@@ -118,6 +121,7 @@
 
     en: {
       'meta.title': 'Excuse Me!',
+      'meta.appName': 'Excuse Me!',
       'meta.description': 'A fast-reaction family card game: ring the bell when exactly 5 of the same dish show up',
       'start.bell': 'Excuse me!',
       'start.title': 'Excuse Me!',
@@ -160,6 +164,7 @@
       'lobby.leave': 'Leave',
       'lobby.host': 'Host',
       'lobby.ready': 'Ready',
+      'lobby.away': 'Reconnecting…',
       'lobby.botTag': ({ level }) => `Bot · ${level}`,
       'lobby.remove': ({ name }) => `Remove ${name}`,
       'lobby.me': ' (you)',
@@ -195,7 +200,8 @@
 
       'result.title': 'Game over',
       'result.again': 'Play again',
-      'result.waitHost': 'The game restarts when the host taps "Play again"',
+      'result.toLobby': 'Back to lobby',
+      'result.waitHost': 'Waiting for the host to pick "Play again" or "Back to lobby"',
       'result.leave': 'Leave',
       'result.winner': 'Winner',
       'result.cards': ({ n }) => cardsEn(n),
@@ -218,6 +224,7 @@
 
     ja: {
       'meta.title': 'すみません！',
+      'meta.appName': 'すみません！',
       'meta.description': '同じメニューがちょうど5つになったらベルを押す、家族で遊べる反射神経カードゲーム',
       'start.bell': 'すみません！',
       'start.title': 'すみません！',
@@ -260,6 +267,7 @@
       'lobby.leave': '退出',
       'lobby.host': 'ホスト',
       'lobby.ready': '準備OK',
+      'lobby.away': '再接続待ち',
       'lobby.botTag': ({ level }) => `ボット・${level}`,
       'lobby.remove': ({ name }) => `${name}を外す`,
       'lobby.me': '（自分）',
@@ -295,7 +303,8 @@
 
       'result.title': 'ゲーム終了',
       'result.again': 'もう一回',
-      'result.waitHost': 'ホストが「もう一回」を押すと再スタートします',
+      'result.toLobby': 'ロビーへ',
+      'result.waitHost': 'ホストが「もう一回」か「ロビーへ」を選ぶのを待っています',
       'result.leave': '退出',
       'result.winner': '優勝',
       'result.cards': ({ n }) => `${n}枚`,
@@ -348,12 +357,21 @@
     return typeof v === 'function' ? v(params || {}) : v;
   }
 
+  // 홈 화면에 추가할 때 쓰이는 앱 이름도 지금 화면 언어로 맞춘다(정적 기본값은 한국어).
+  function applyAppName(doc) {
+    for (const name of ['apple-mobile-web-app-title', 'application-name']) {
+      const el = doc.querySelector(`meta[name="${name}"]`);
+      if (el) el.setAttribute('content', t('meta.appName'));
+    }
+  }
+
   // data-i18n(글자), data-i18n-placeholder, data-i18n-aria-label 이 붙은 요소를 지금 언어로 바꾼다.
   function apply(doc) {
     doc = doc || root.document;
     if (!doc) return;
     doc.documentElement.lang = lang;
     doc.title = t('meta.title');
+    applyAppName(doc);
     const meta = doc.querySelector('meta[name="description"]');
     if (meta) meta.setAttribute('content', t('meta.description'));
     doc.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
@@ -376,6 +394,7 @@
     if (found.fromQuery) writeStored(lang);
     root.document.documentElement.lang = lang;
     if (lang !== 'ko') root.document.title = DICT[lang]['meta.title'];
+    applyAppName(root.document);
   }
 
   const I18n = {

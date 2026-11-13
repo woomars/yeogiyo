@@ -289,6 +289,7 @@
   UI.on('rules-close', () => UI.show('start'));
   UI.on('start', (timeLimit) => hostSend({ t: 'start', timeLimit }));
   UI.on('again', () => hostSend({ t: 'again' }));
+  UI.on('to-lobby', () => hostSend({ t: 'lobby' }));
   UI.on('add-bot', (level) => hostSend({ t: 'add-bot', level }));
   UI.on('remove-bot', (id) => hostSend({ t: 'remove-bot', id }));
   UI.on('flip', () => client && client.flip());

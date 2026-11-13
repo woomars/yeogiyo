@@ -2,15 +2,15 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="apple-mobile-web-app-title" content="Excuse Me!">
-<meta name="application-name" content="Excuse Me!">
+<meta name="apple-mobile-web-app-title" content="여기요!">
+<meta name="application-name" content="여기요!">
 <title>여기요!</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#fbeed3">
 <meta name="description" content="같은 메뉴가 딱 5개면 벨을 누르는 가족용 반응 속도 카드 게임">
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css?v=4144f40aa1">
-<script src="js/i18n.js?v=12d7a55082"></script>
+<script src="js/i18n.js?v=6cedae1cec"></script>
   <script src="https://woomars.github.io/count.js" defer></script>
 </head>
 <body>
@@ -117,7 +117,8 @@
     <h2 data-i18n="result.title">게임 끝</h2>
     <ol class="ranking" id="ranking"></ol>
     <button class="btn primary host-only" data-act="again" data-i18n="result.again">한 판 더</button>
-    <p class="guest-only waiting" data-i18n="result.waitHost">방장이 「한 판 더」를 누르면 다시 시작해요</p>
+    <button class="btn light host-only" data-act="to-lobby" data-i18n="result.toLobby">대기실로</button>
+    <p class="guest-only waiting" data-i18n="result.waitHost">방장이 「한 판 더」나 「대기실로」를 고르길 기다리는 중</p>
     <button class="btn dark" data-act="leave" data-i18n="result.leave">나가기</button>
   </section>
 
@@ -137,12 +138,12 @@
 <script src="vendor/qrcode.js?v=6e6189e2b1"></script>
 <script src="js/game.js?v=0711414d47"></script>
 <script src="js/judge.js?v=c8758ac343"></script>
-<script src="js/host.js?v=f4d637a0c1"></script>
+<script src="js/host.js?v=b8cdb202aa"></script>
 <script src="js/net.js?v=19f072a54c"></script>
 <script src="js/cards.js?v=7a58b37cfc"></script>
 <script src="js/sound.js?v=61819a0295"></script>
-<script src="js/ui.js?v=e685dc34e2"></script>
-<script src="js/client.js?v=63b27fd04d"></script>
-<script src="js/app.js?v=20c94c5c66"></script>
+<script src="js/ui.js?v=18df20b907"></script>
+<script src="js/client.js?v=b298a425d1"></script>
+<script src="js/app.js?v=bd8f1ecd4f"></script>
 </body>
 </html>

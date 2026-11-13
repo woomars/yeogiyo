@@ -105,6 +105,7 @@
         case 'flip': this.onFlip(m); break;
         case 'ring': this.onRing(m, msg); break;
         case 'again': if (isHost) this.onAgain(); break;
+        case 'lobby': if (isHost) this.onLobby(); break;
         case 'add-bot': if (isHost) this.onAddBot(msg); break;
         case 'remove-bot': if (isHost) this.onRemoveBot(msg); break;
         case 'leave': if (!isHost) this.onLeave(m); break;
@@ -112,23 +113,30 @@
       }
     }
 
+    // 손님 연결이 끊겼다. 대기실·게임·결과 어디서든 30초 동안 자리를 남겨 두고 돌아오길 기다린다.
+    // (폰 화면이 꺼지거나 잠깐 다른 앱을 봐도 같은 방에서 이어 하도록)
     handleDisconnect(peerId) {
       if (this.disposed) return;
       const m = this.memberByPeer(peerId);
       if (!m || peerId === this.hostPeerId) return;
-      if (!this.inGame()) return this.removeFromLobby(m);
       m.connected = false;
-      if (this.phase === 'over') return this.broadcast();
+      this.waitFor(m);
+      if (this.phase === 'lobby' || this.phase === 'over') return this.broadcast();
       this.flushTransient();
       if (this.game.over) {
         this.endGame();
         return this.broadcast();
       }
+      this.setPhase('paused');
+      this.broadcast();
+    }
+
+    waitFor(m) {
+      const old = this.pending.get(m.id);
+      if (old) this.clock.clearTimeout(old.timer);
       const deadline = this.clock.now() + TIMING.RECONNECT_MS;
       const timer = this.clock.setTimeout(() => this.expire(m), TIMING.RECONNECT_MS);
       this.pending.set(m.id, { timer, deadline });
-      this.setPhase('paused');
-      this.broadcast();
     }
 
     close() {
@@ -147,7 +155,7 @@
     onHello(peerId, msg) {
       if (this.memberByPeer(peerId)) return;
       const known = msg.token ? this.members.find((m) => m.token === msg.token) : null;
-      if (known && this.inGame()) return this.reattach(known, peerId);
+      if (known) return this.reattach(known, peerId);
       if (this.phase !== 'lobby') return this.send(peerId, { t: 'reject', reason: 'started' });
       if (this.members.length >= MAX_PLAYERS) return this.send(peerId, { t: 'reject', reason: 'full' });
       const id = peerId === this.hostPeerId ? 'p1' : 'p' + this.nextId++;
@@ -159,16 +167,14 @@
     }
 
     // 같은 기기가 다시 들어왔다. 끊긴 걸 아직 몰랐던 경우에도 새 연결로 바꿔 끼운다.
+    // 대기실과 결과 화면에서는 판에서 빠졌던 사람도 다음 판을 위해 다시 받는다.
     reattach(m, peerId) {
-      const p = this.game.players.find((x) => x.id === m.id);
-      if (p.removed) return this.send(peerId, { t: 'reject', reason: 'started' });
+      const playing = this.phase !== 'lobby' && this.phase !== 'over';
+      const p = this.game && this.game.players.find((x) => x.id === m.id);
+      if (playing && (!p || p.removed)) return this.send(peerId, { t: 'reject', reason: 'started' });
       m.peerId = peerId;
       m.connected = true;
-      const wait = this.pending.get(m.id);
-      if (wait) {
-        this.clock.clearTimeout(wait.timer);
-        this.pending.delete(m.id);
-      }
+      this.stopWaiting(m);
       this.send(peerId, { t: 'welcome', playerId: m.id, token: m.token });
       this.resumeIfReady();
       this.broadcast();
@@ -177,10 +183,16 @@
     onStart(msg) {
       if (this.phase !== 'lobby' || this.members.length < 2) return;
       this.timeLimit = !!msg.timeLimit;
+      this.beginGame();
+    }
+
+    // 지금 명단으로 새 판을 연다. 아직 다시 붙는 중인 사람이 있으면 멈춘 채로 시작해 기다린다.
+    beginGame() {
       this.timeLeft = TIMING.TIME_LIMIT_MS;
       this.game = Game.newGame(this.members.map((m) => m.id), this.rng);
       this.result = null;
-      this.setPhase('playing');
+      this.presses = [];
+      this.setPhase(this.pending.size ? 'paused' : 'playing');
       this.broadcast();
     }
 
@@ -237,9 +249,29 @@
       if (m) this.removeFromLobby(m);
     }
 
+    // 결과 화면에서 다음 판으로 넘어갈 명단: 연결된 사람과 봇, 그리고 다시 붙는 중인 사람.
+    // 스스로 나갔거나 30초 안에 돌아오지 않은 사람만 뺀다.
+    keepForNext() {
+      this.members = this.members.filter((m) => m.connected || this.pending.has(m.id));
+    }
+
+    // 한 판 더: 같은 사람, 같은 봇, 같은 시간 제한으로 바로 시작한다.
+    // 함께할 사람이 없으면 대기실로 간다(봇을 넣거나 사람을 기다리게).
     onAgain() {
       if (this.phase !== 'over') return;
-      this.members = this.members.filter((m) => m.connected);
+      this.keepForNext();
+      if (this.members.length < 2) return this.toLobby();
+      this.beginGame();
+    }
+
+    // 대기실로: 같은 방 대기실로 모두 데려간다. 봇과 시간 제한을 바꿀 수 있다.
+    onLobby() {
+      if (this.phase !== 'over') return;
+      this.keepForNext();
+      this.toLobby();
+    }
+
+    toLobby() {
       this.game = null;
       this.result = null;
       this.setPhase('lobby');
@@ -247,6 +279,7 @@
     }
 
     onLeave(m) {
+      this.stopWaiting(m);
       if (!this.inGame()) return this.removeFromLobby(m);
       m.connected = false;
       if (this.phase !== 'over') {
@@ -257,7 +290,15 @@
       this.broadcast();
     }
 
+    stopWaiting(m) {
+      const wait = this.pending.get(m.id);
+      if (!wait) return;
+      this.clock.clearTimeout(wait.timer);
+      this.pending.delete(m.id);
+    }
+
     removeFromLobby(m) {
+      this.stopWaiting(m);
       if (m.bot) this.stopBot(m);
       this.members = this.members.filter((x) => x !== m);
       this.broadcast();
@@ -379,6 +420,9 @@
 
     expire(m) {
       this.pending.delete(m.id);
+      if (this.phase === 'lobby') return this.removeFromLobby(m);
+      // 결과 화면: 순위는 그대로 두고, 다음 판 명단에서만 빠진다.
+      if (this.phase === 'over') return this.broadcast();
       Game.removePlayer(this.game, m.id);
       this.resumeIfReady();
       this.broadcast();
@@ -396,9 +440,8 @@
       if (this.game && this.game.over && this.phase !== 'result') this.endGame();
     }
 
+    // 다시 붙는 중인 사람의 대기 시간은 그대로 둔다. 결과 화면에서도 돌아오면 다음 판에 낀다.
     endGame() {
-      for (const { timer } of this.pending.values()) this.clock.clearTimeout(timer);
-      this.pending.clear();
       this.setPhase('over');
     }
 

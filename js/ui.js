@@ -87,7 +87,11 @@
     const isHost = view.me === view.hostId;
     const rows = view.players.map((p) => {
       const level = p.botLevel ? t('level.' + p.botLevel) : p.bot;
-      let tail = `<small>${esc(p.id === view.hostId ? t('lobby.host') : p.bot ? t('lobby.botTag', { level }) : t('lobby.ready'))}</small>`;
+      let tag = t('lobby.ready');
+      if (p.id === view.hostId) tag = t('lobby.host');
+      else if (p.bot) tag = t('lobby.botTag', { level });
+      else if (!p.connected) tag = t('lobby.away');
+      let tail = `<small>${esc(tag)}</small>`;
       if (p.bot && isHost) tail += `<button class="x" data-act="remove-bot" data-id="${esc(p.id)}" aria-label="${esc(t('lobby.remove', { name: display(p) }))}">✕</button>`;
       return `<li><span class="dot" style="background:${p.color}"></span>${esc(display(p))}${p.id === view.me ? esc(t('lobby.me')) : ''}${tail}</li>`;
     });
