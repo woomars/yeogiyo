@@ -6,16 +6,15 @@
   const SCREENS = ['start', 'rules', 'join', 'lobby', 'game', 'result'];
   const handlers = {};
   const emit = (event, arg) => (handlers[event] || []).forEach((fn) => fn(arg));
-
-  // 받침이 있으면 '이', 없으면 '가'.
-  function subject(name) {
-    const last = name.charCodeAt(name.length - 1);
-    const hangul = last >= 0xac00 && last <= 0xd7a3;
-    return name + (hangul && (last - 0xac00) % 28 !== 0 ? '이' : '가');
-  }
+  const { t } = root.I18n;
 
   const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`);
-  const nameOf = (view, id) => (view.players.find((p) => p.id === id) || { name: '?' }).name;
+  // 봇 이름은 방장이 정한 한국어 이름 대신 각자 화면 언어로 보여 준다.
+  const display = (p) => (p.botLevel && p.botNo ? t('bot.name', { n: p.botNo, level: t('level.' + p.botLevel) }) : p.name);
+  const nameOf = (view, id) => {
+    const p = view.players.find((x) => x.id === id);
+    return p ? display(p) : '?';
+  };
 
   // ---- 시간 표시: 받은 시각부터 화면에서 직접 줄여 나간다 ----
   let clockView = null;
@@ -30,11 +29,11 @@
     else {
       const ms = Math.max(0, v.remainingMs - (running ? passed : 0));
       const s = Math.ceil(ms / 1000);
-      $('#timer').textContent = `남은 시간 ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      $('#timer').textContent = t('game.timer', { time: `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` });
     }
     if (v.phase === 'paused' && v.paused) {
       const left = Math.max(0, Math.ceil((v.paused.msLeft - passed) / 1000));
-      showBanner(`${esc(nameOf(v, v.paused.playerId))} 연결 기다리는 중… ${left}초`);
+      showBanner(esc(t('game.paused', { name: nameOf(v, v.paused.playerId), s: left })));
     }
   }
 
@@ -48,15 +47,15 @@
     const r = view.result;
     const lines = [];
     if (r.winnerId) {
-      const who = esc(subject(nameOf(view, r.winnerId)));
+      const name = nameOf(view, r.winnerId);
       let text;
-      if (r.gapMs === null) text = `${esc(nameOf(view, r.winnerId))} 정답!`;
-      else if (r.gapMs < 10) text = `${who} 간발의 차이로 먼저!`;
-      else text = `${who} ${(r.gapMs / 1000).toFixed(2)}초 차이로 먼저!`;
-      lines.push(`<span class="ok">${text}</span>`);
+      if (r.gapMs === null) text = t('game.correct', { name });
+      else if (r.gapMs < 10) text = t('game.firstByHair', { name });
+      else text = t('game.firstBy', { name, gap: (r.gapMs / 1000).toFixed(2) });
+      lines.push(`<span class="ok">${esc(text)}</span>`);
     }
     if (r.wrongIds.length) {
-      lines.push(`${r.wrongIds.map((id) => esc(nameOf(view, id))).join(', ')} 땡! 한 장씩 나눠 줘요`);
+      lines.push(esc(t('game.wrong', { names: r.wrongIds.map((id) => nameOf(view, id)) })));
     }
     return lines.join('<br>');
   }
@@ -87,16 +86,17 @@
     }
     const isHost = view.me === view.hostId;
     const rows = view.players.map((p) => {
-      let tail = `<small>${p.id === view.hostId ? '방장' : p.bot ? `봇 · ${p.bot}` : '준비됨'}</small>`;
-      if (p.bot && isHost) tail += `<button class="x" data-act="remove-bot" data-id="${esc(p.id)}" aria-label="${esc(p.name)} 빼기">✕</button>`;
-      return `<li><span class="dot" style="background:${p.color}"></span>${esc(p.name)}${p.id === view.me ? ' (나)' : ''}${tail}</li>`;
+      const level = p.botLevel ? t('level.' + p.botLevel) : p.bot;
+      let tail = `<small>${esc(p.id === view.hostId ? t('lobby.host') : p.bot ? t('lobby.botTag', { level }) : t('lobby.ready'))}</small>`;
+      if (p.bot && isHost) tail += `<button class="x" data-act="remove-bot" data-id="${esc(p.id)}" aria-label="${esc(t('lobby.remove', { name: display(p) }))}">✕</button>`;
+      return `<li><span class="dot" style="background:${p.color}"></span>${esc(display(p))}${p.id === view.me ? esc(t('lobby.me')) : ''}${tail}</li>`;
     });
-    for (let i = view.players.length; i < 4; i++) rows.push('<li class="empty">기다리는 중…</li>');
+    for (let i = view.players.length; i < 4; i++) rows.push(`<li class="empty">${esc(t('lobby.empty'))}</li>`);
     $('#lobby-players').innerHTML = rows.join('');
     const n = view.players.length;
     document.querySelectorAll('#bot-add .chip').forEach((b) => { b.disabled = n >= 4; });
     const btn = $('#start-btn');
-    btn.textContent = `시작하기 (${n}명)`;
+    btn.textContent = t('lobby.startN', { n });
     btn.disabled = n < 2;
   }
 
@@ -113,10 +113,10 @@
       if (p.isTurn) cell.classList.add('turn');
       if (p.out) cell.classList.add('out');
       let tag = '';
-      if (p.removed) tag = ' · 나감';
-      else if (!p.connected) tag = ' · 연결 끊김';
-      else if (p.out) tag = ' · 탈락';
-      cell.innerHTML = `<div class="who"><b>${esc(p.name)}${p.id === view.me ? '(나)' : ''}</b> · ${p.count}장<span class="tag">${tag}</span></div>`;
+      if (p.removed) tag = ' · ' + t('game.tagLeft');
+      else if (!p.connected) tag = ' · ' + t('game.tagDisconnected');
+      else if (p.out) tag = ' · ' + t('game.tagOut');
+      cell.innerHTML = `<div class="who"><b>${esc(display(p))}${p.id === view.me ? esc(t('game.me')) : ''}</b> · ${esc(t('game.cards', { n: p.count }))}<span class="tag">${esc(tag)}</span></div>`;
       const card = root.Cards.render(p.top);
       const key = p.top ? p.top.menu + p.top.count : '';
       if (key && lastTops[p.id] !== undefined && lastTops[p.id] !== key) card.classList.add('pop');
@@ -139,7 +139,7 @@
     const flip = $('#flip-btn');
     const myTurn = !!me.isTurn && view.phase === 'playing';
     flip.disabled = !myTurn;
-    flip.textContent = myTurn ? '내 차례 · 뒤집기' : turn ? `${turn.name} 차례` : '잠시만요';
+    flip.textContent = myTurn ? t('game.flipMine') : turn ? t('game.turnOf', { name: display(turn) }) : t('game.wait');
     $('#bell').disabled = !(view.phase === 'playing' || view.phase === 'judging') || me.out || me.removed;
 
     $('#banner').hidden = true;
@@ -153,8 +153,8 @@
     setRole(view);
     const ranked = view.players.filter((p) => !p.removed).slice().sort((a, b) => b.count - a.count);
     $('#ranking').innerHTML = ranked.map((p, i) => `<li><span class="rank">${i + 1}</span>`
-      + `<span class="dot" style="background:${p.color};width:12px;height:12px;border-radius:50%"></span>${esc(p.name)}`
-      + `${view.winners.includes(p.id) ? ' <span class="badge">우승</span>' : ''}<small>${p.count}장</small></li>`).join('');
+      + `<span class="dot" style="background:${p.color};width:12px;height:12px;border-radius:50%"></span>${esc(display(p))}`
+      + `${view.winners.includes(p.id) ? ` <span class="badge">${esc(t('result.winner'))}</span>` : ''}<small>${esc(t('result.cards', { n: p.count }))}</small></li>`).join('');
   }
 
   let toastTimer = null;
@@ -206,6 +206,8 @@
 
   function bind() {
     document.addEventListener('click', (e) => {
+      const pick = e.target.closest('[data-lang]');
+      if (pick) return emit('lang', pick.dataset.lang);
       const btn = e.target.closest('[data-act]');
       if (!btn || btn.disabled) return;
       const act = btn.dataset.act;
@@ -235,10 +237,20 @@
       $('#error').hidden = true;
       if (retryFn) retryFn();
     });
-    // 규칙 화면의 예시 카드
-    $('#ex-a').replaceWith(Object.assign(root.Cards.render({ menu: 'gimbap', count: 2 }), { className: 'card ex-card' }));
-    $('#ex-b').replaceWith(Object.assign(root.Cards.render({ menu: 'gimbap', count: 3 }), { className: 'card ex-card' }));
+    drawExamples();
     drawDigits();
+  }
+
+  // 규칙 화면의 예시 카드
+  function drawExamples() {
+    $('#ex-a').replaceWith(Object.assign(root.Cards.render({ menu: 'gimbap', count: 2 }), { className: 'card ex-card', id: 'ex-a' }));
+    $('#ex-b').replaceWith(Object.assign(root.Cards.render({ menu: 'gimbap', count: 3 }), { className: 'card ex-card', id: 'ex-b' }));
+  }
+
+  // 언어를 바꾼 뒤 정적 글자와 예시 카드를 다시 그린다.
+  function setLang(lang) {
+    root.I18n.setLang(lang);
+    drawExamples();
   }
 
   function clearCode() {
@@ -249,7 +261,7 @@
   bind();
 
   root.UI = {
-    show, renderLobby, renderGame, renderResult, toast, error, bellPressed, on, setMessage, clearCode,
+    show, renderLobby, renderGame, renderResult, toast, error, bellPressed, on, setMessage, clearCode, setLang,
     focusCode: () => $('#code').focus(),
     setName: (name) => { $('#name').value = name; },
     getName: () => $('#name').value,

@@ -2,7 +2,7 @@
 (function (root) {
   'use strict';
 
-  const LABELS = { gimbap: '김밥', mandu: '만두', tteok: '떡볶이', eomuk: '어묵' };
+  const { t } = root.I18n;
   // 3×3 칸 번호(1~9)에 그림을 놓는다.
   const PIPS = { 1: [5], 2: [1, 9], 3: [1, 5, 9], 4: [1, 3, 7, 9], 5: [1, 3, 5, 7, 9] };
   const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -24,7 +24,7 @@
       return el;
     }
     el.setAttribute('role', 'img');
-    el.setAttribute('aria-label', `${LABELS[card.menu]} ${card.count}개`);
+    el.setAttribute('aria-label', t('card.label', { menu: t('menu.' + card.menu), n: card.count }));
     for (const slot of PIPS[card.count]) {
       const s = symbol(card.menu);
       s.style.gridRow = String(Math.ceil(slot / 3));
@@ -34,5 +34,5 @@
     return el;
   }
 
-  root.Cards = { render, LABELS };
+  root.Cards = { render };
 })(this);

@@ -2,12 +2,15 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<meta name="apple-mobile-web-app-title" content="Excuse Me!">
+<meta name="application-name" content="Excuse Me!">
 <title>여기요!</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#fbeed3">
 <meta name="description" content="같은 메뉴가 딱 5개면 벨을 누르는 가족용 반응 속도 카드 게임">
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="style.css?v=33e5045a58">
+<link rel="stylesheet" href="style.css?v=4144f40aa1">
+<script src="js/i18n.js?v=12d7a55082"></script>
   <script src="https://woomars.github.io/count.js" defer></script>
 </head>
 <body>
@@ -25,92 +28,97 @@
 
   <section class="screen" id="screen-start">
     <div class="logo">
-      <div class="logo-bell">여기요!</div>
-      <h1>여기요!</h1>
-      <p>같은 메뉴가 딱 5개면 벨을 누르세요</p>
+      <div class="logo-bell" data-i18n="start.bell">여기요!</div>
+      <h1 data-i18n="start.title">여기요!</h1>
+      <p data-i18n="start.tagline">같은 메뉴가 딱 5개면 벨을 누르세요</p>
     </div>
-    <label class="lbl" for="name">내 이름</label>
-    <input class="inp" id="name" maxlength="8" autocomplete="nickname" placeholder="예: 아빠">
+    <label class="lbl" for="name" data-i18n="start.nameLabel">내 이름</label>
+    <input class="inp" id="name" maxlength="8" autocomplete="nickname" placeholder="예: 아빠" data-i18n-placeholder="start.namePlaceholder">
     <p class="msg" id="start-msg"></p>
-    <button class="btn primary" data-act="create">방 만들기</button>
-    <button class="btn dark" data-act="join-open">방 들어가기</button>
-    <button class="btn light" data-act="rules-open">간단 규칙</button>
+    <button class="btn primary" data-act="create" data-i18n="start.create">방 만들기</button>
+    <button class="btn dark" data-act="join-open" data-i18n="start.join">방 들어가기</button>
+    <button class="btn light" data-act="rules-open" data-i18n="start.rules">간단 규칙</button>
+    <div class="lang-pick" role="group" aria-label="언어" data-i18n-aria-label="lang.label">
+      <button type="button" data-lang="ko" lang="ko" aria-label="한국어" title="한국어"><svg viewBox="-36 -24 72 48" aria-hidden="true"><rect x="-36" y="-24" width="72" height="48" fill="#fff"/><g transform="rotate(-56.31)"><path d="M-6-25H6M-6-22H6M-6-19H6M-6 19H6M-6 22H6M-6 25H6" stroke="#000" stroke-width="2"/><path d="M0 17v10" stroke="#fff"/><circle r="12" fill="#cd2e3a"/><path d="M0-12A6 6 0 0 0 0 0A6 6 0 0 1 0 12A12 12 0 0 1 0-12Z" fill="#0047a0"/></g><g transform="rotate(-123.69)"><path d="M-6-25H6M-6-22H6M-6-19H6M-6 19H6M-6 22H6M-6 25H6" stroke="#000" stroke-width="2"/><path d="M0-23.5v3M0 17v3.5M0 23.5v3" stroke="#fff"/></g></svg></button>
+      <button type="button" data-lang="en" lang="en" aria-label="English" title="English"><svg viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#b22234"/><path d="M0 2.31H30M0 5.38H30M0 8.46H30M0 11.54H30M0 14.62H30M0 17.69H30" stroke="#fff" stroke-width="1.54"/><rect width="12" height="10.77" fill="#3c3b6e"/><g fill="#fff"><circle cx="2" cy="1.8" r=".55"/><circle cx="6" cy="1.8" r=".55"/><circle cx="10" cy="1.8" r=".55"/><circle cx="4" cy="4.1" r=".55"/><circle cx="8" cy="4.1" r=".55"/><circle cx="2" cy="6.4" r=".55"/><circle cx="6" cy="6.4" r=".55"/><circle cx="10" cy="6.4" r=".55"/><circle cx="4" cy="8.7" r=".55"/><circle cx="8" cy="8.7" r=".55"/></g></svg></button>
+      <button type="button" data-lang="ja" lang="ja" aria-label="日本語" title="日本語"><svg viewBox="0 0 30 20" aria-hidden="true"><rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="6" fill="#bc002d"/></svg></button>
+    </div>
   </section>
 
   <section class="screen" id="screen-rules" hidden>
-    <h2>간단 규칙</h2>
+    <h2 data-i18n="rules.title">간단 규칙</h2>
     <ol class="rules">
-      <li>차례대로 자기 카드를 한 장씩 뒤집어요.</li>
-      <li>같은 메뉴가 딱 5개면 「여기요!」를 눌러요.</li>
-      <li>맞히면 펼쳐진 카드를 모두 가져가요.</li>
-      <li>틀리면 다른 사람 모두에게 한 장씩 줘요.</li>
-      <li>뒤집을 카드가 없으면 탈락이에요.</li>
+      <li data-i18n="rules.1">차례대로 자기 카드를 한 장씩 뒤집어요.</li>
+      <li data-i18n="rules.2">같은 메뉴가 딱 5개면 「여기요!」를 눌러요.</li>
+      <li data-i18n="rules.3">맞히면 펼쳐진 카드를 모두 가져가요.</li>
+      <li data-i18n="rules.4">틀리면 다른 사람 모두에게 한 장씩 줘요.</li>
+      <li data-i18n="rules.5">뒤집을 카드가 없으면 탈락이에요.</li>
     </ol>
     <div class="example">
       <div class="ex-card" id="ex-a"></div>
       <span class="ex-op">+</span>
       <div class="ex-card" id="ex-b"></div>
-      <span class="ex-op">= 김밥 5개!</span>
+      <span class="ex-op" data-i18n="rules.example">= 김밥 5개!</span>
     </div>
-    <button class="btn dark" data-act="rules-close">닫기</button>
+    <button class="btn dark" data-act="rules-close" data-i18n="rules.close">닫기</button>
   </section>
 
   <section class="screen" id="screen-join" hidden>
-    <h2>방 번호 입력</h2>
-    <p class="hint">방장 화면의 숫자 4자리</p>
+    <h2 data-i18n="join.title">방 번호 입력</h2>
+    <p class="hint" data-i18n="join.hint">방장 화면의 숫자 4자리</p>
     <div class="digits">
-      <input id="code" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="방 번호">
+      <input id="code" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="방 번호" data-i18n-aria-label="join.codeLabel">
       <div class="boxes" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
     </div>
     <p class="msg" id="join-msg"></p>
-    <button class="btn primary" data-act="join-submit">들어가기</button>
-    <button class="btn link" data-act="back">뒤로</button>
+    <button class="btn primary" data-act="join-submit" data-i18n="join.submit">들어가기</button>
+    <button class="btn link" data-act="back" data-i18n="join.back">뒤로</button>
   </section>
 
   <section class="screen" id="screen-lobby" hidden>
     <div class="host-only">
-      <p class="muted">방 번호</p>
+      <p class="muted" data-i18n="lobby.code">방 번호</p>
       <div class="room-code" id="lobby-code"></div>
       <div class="qr" id="qr"></div>
-      <p class="muted">카메라로 찍으면 바로 들어옵니다</p>
+      <p class="muted" data-i18n="lobby.qrHint">카메라로 찍으면 바로 들어옵니다</p>
     </div>
     <ul class="players" id="lobby-players"></ul>
     <div class="host-only bot-add" id="bot-add">
-      <span>봇 추가</span>
-      <button class="chip" data-act="add-bot" data-level="easy">하</button>
-      <button class="chip" data-act="add-bot" data-level="normal">중</button>
-      <button class="chip" data-act="add-bot" data-level="hard">상</button>
+      <span data-i18n="lobby.addBot">봇 추가</span>
+      <button class="chip" data-act="add-bot" data-level="easy" data-i18n="level.easy">하</button>
+      <button class="chip" data-act="add-bot" data-level="normal" data-i18n="level.normal">중</button>
+      <button class="chip" data-act="add-bot" data-level="hard" data-i18n="level.hard">상</button>
     </div>
     <div class="host-only">
-      <label class="toggle">시간 제한 7분 <input type="checkbox" id="time-limit" checked><span class="sw"></span></label>
-      <button class="btn primary" data-act="start" id="start-btn">시작하기</button>
-      <p class="muted">게임 중에는 다른 앱으로 넘어가지 마세요</p>
+      <label class="toggle"><span data-i18n="lobby.timeLimit">시간 제한 7분</span> <input type="checkbox" id="time-limit" checked><span class="sw"></span></label>
+      <button class="btn primary" data-act="start" id="start-btn" data-i18n="lobby.start">시작하기</button>
+      <p class="muted" data-i18n="lobby.stayHint">게임 중에는 다른 앱으로 넘어가지 마세요</p>
     </div>
-    <p class="guest-only waiting">방장이 시작하길 기다리는 중</p>
-    <button class="btn link" data-act="leave">나가기</button>
+    <p class="guest-only waiting" data-i18n="lobby.waitingHost">방장이 시작하길 기다리는 중</p>
+    <button class="btn link" data-act="leave" data-i18n="lobby.leave">나가기</button>
   </section>
 
   <section class="screen game" id="screen-game" hidden>
     <div class="top-bar">
       <span class="timer" id="timer"></span>
-      <button class="mini" data-act="leave">나가기</button>
+      <button class="mini" data-act="leave" data-i18n="game.leave">나가기</button>
     </div>
     <div class="board-wrap">
       <div class="board" id="board"></div>
       <div class="banner" id="banner" hidden></div>
     </div>
-    <button class="btn dark flip" id="flip-btn" data-act="flip" disabled>내 차례 · 뒤집기</button>
+    <button class="btn dark flip" id="flip-btn" data-act="flip" disabled data-i18n="game.flipMine">내 차례 · 뒤집기</button>
     <div class="bell-zone">
-      <button class="bell" id="bell" type="button">여기요!</button>
+      <button class="bell" id="bell" type="button" data-i18n="game.bell">여기요!</button>
     </div>
   </section>
 
   <section class="screen" id="screen-result" hidden>
-    <h2>게임 끝</h2>
+    <h2 data-i18n="result.title">게임 끝</h2>
     <ol class="ranking" id="ranking"></ol>
-    <button class="btn primary host-only" data-act="again">한 판 더</button>
-    <p class="guest-only waiting">방장이 「한 판 더」를 누르면 다시 시작해요</p>
-    <button class="btn dark" data-act="leave">나가기</button>
+    <button class="btn primary host-only" data-act="again" data-i18n="result.again">한 판 더</button>
+    <p class="guest-only waiting" data-i18n="result.waitHost">방장이 「한 판 더」를 누르면 다시 시작해요</p>
+    <button class="btn dark" data-act="leave" data-i18n="result.leave">나가기</button>
   </section>
 
 </main>
@@ -119,21 +127,22 @@
 <div class="modal" id="error" hidden>
   <div class="modal-box">
     <p id="error-text"></p>
-    <button class="btn primary" id="error-retry" hidden>다시 시도</button>
-    <button class="btn dark" id="error-ok">확인</button>
+    <button class="btn primary" id="error-retry" hidden data-i18n="error.retry">다시 시도</button>
+    <button class="btn dark" id="error-ok" data-i18n="error.ok">확인</button>
   </div>
 </div>
+<script>I18n.apply(document);</script>
 
 <script src="vendor/peerjs.min.js?v=c2c48b561e"></script>
 <script src="vendor/qrcode.js?v=6e6189e2b1"></script>
 <script src="js/game.js?v=0711414d47"></script>
 <script src="js/judge.js?v=c8758ac343"></script>
-<script src="js/host.js?v=d741040600"></script>
+<script src="js/host.js?v=f4d637a0c1"></script>
 <script src="js/net.js?v=19f072a54c"></script>
-<script src="js/cards.js?v=e41d9c12d9"></script>
+<script src="js/cards.js?v=7a58b37cfc"></script>
 <script src="js/sound.js?v=61819a0295"></script>
-<script src="js/ui.js?v=b26f3facca"></script>
+<script src="js/ui.js?v=e685dc34e2"></script>
 <script src="js/client.js?v=63b27fd04d"></script>
-<script src="js/app.js?v=c8e822b5a1"></script>
+<script src="js/app.js?v=20c94c5c66"></script>
 </body>
 </html>

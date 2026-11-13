@@ -457,6 +457,9 @@
           color: COLORS[seat],
           connected: m.connected,
           bot: m.bot ? BOT_LEVELS[m.bot].label : null,
+          // 각자 화면 언어로 봇 이름을 그리도록 난이도 키와 번호도 보낸다.
+          botLevel: m.bot || null,
+          botNo: m.bot ? m.botNo : null,
           out: p ? p.out : false,
           removed: p ? p.removed : false,
           count: p ? Game.cardCount(p) : 0,
